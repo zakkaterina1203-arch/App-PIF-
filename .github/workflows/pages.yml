@@ -1,0 +1,53 @@
+name: Publish PIF Navigator
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '20 5 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test search and catalog
+        run: npm test
+      - name: Restore source observations
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: source-monitor-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: source-monitor-
+      - name: Check source pages
+        run: npm run monitor
+      - name: Prepare static site
+        run: |
+          mkdir -p _site/assets _site/data
+          cp index.html app.js search.js styles.css .nojekyll _site/
+          cp assets/*.svg _site/assets/
+          cp data/*.json _site/data/
+      - name: Upload static website
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

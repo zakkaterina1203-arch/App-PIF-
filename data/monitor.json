@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-10-31T15:10:37.800Z",
+  "note": "Технические изменения страниц; не подтверждает полноту или актуальность правовых норм.",
+  "sources": [
+    {
+      "name": "Банк России · новости ПИФ",
+      "url": "https://cbr.ru/press/event/?id=32864",
+      "status": "error",
+      "error": "fetch failed"
+    },
+    {
+      "name": "Банк России · разъяснения",
+      "url": "https://www.cbr.ru/explan/rpd",
+      "status": "error",
+      "error": "fetch failed"
+    },
+    {
+      "name": "НАУФОР · новости ПИФ",
+      "url": "https://pif.naufor.ru/tree.asp?n=1558&pg=1",
+      "status": "error",
+      "error": "fetch failed"
+    },
+    {
+      "name": "IFRS Foundation · IFRS 18",
+      "url": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-18-presentation-and-disclosure-in-financial-statements/",
+      "status": "error",
+      "error": "Страница проверки доступа вместо документа"
+    },
+    {
+      "name": "IFRS Foundation · все новости",
+      "url": "https://www.ifrs.org/news-and-events/news/",
+      "status": "error",
+      "error": "Страница проверки доступа вместо документа"
+    }
+  ]
+}

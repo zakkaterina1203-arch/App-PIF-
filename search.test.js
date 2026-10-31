@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {searchDocuments,getStatus,getEvents,normalize} from './search.js';
+const catalog=JSON.parse(await readFile(new URL('./data/catalog.json',import.meta.url),'utf8'));
+const docs=catalog.documents;
+const search=(query,more={})=>searchDocuments(docs,{query,asOf:'2026-10-31',...more});
+test('погашение паёв возвращает закон с прямыми ссылками на статьи',()=>{const r=search('погашение паёв');const law=r.find(x=>x.doc.id==='law-156');assert.ok(law);assert.ok(law.clauses.some(c=>c.ref==='Статья 23'));assert.ok(law.clauses.every(c=>c.url.startsWith('https://')));});
+test('оценка облигаций находит пункт 4.1.4 и методы оценки IFRS 13',()=>{const r=search('оценка облигаций');assert.ok(r.some(x=>x.doc.id==='ifrs13'&&x.clauses.some(c=>c.ref==='Пункты 61–67')));assert.ok(r.some(x=>x.doc.id==='ifrs9'&&x.clauses.some(c=>c.ref==='Пункт 4.1.4')));});
+test('капитал или обязательство ведёт к IAS 32 16A–16B',()=>{const r=search('капитал или обязательство');assert.equal(r[0].doc.id,'ias32');assert.equal(r[0].clauses[0].ref,'Пункты 16A–16B');});
+test('поиск по номеру пункта и кириллической букве',()=>{assert.equal(normalize('16А'),'16a');assert.equal(search('16А')[0].doc.id,'ias32');assert.ok(search('статья 25').some(r=>r.clauses.some(c=>c.ref==='Статья 25')));});
+test('статус меняется на границе даты; дата исполнения не подменяет начало действия',()=>{const d=docs.find(d=>d.id==='ifrs18');assert.equal(getStatus(d,'2026-12-31'),'future');assert.equal(getStatus(d,'2027-01-01'),'active');const pdu=docs.find(d=>d.id==='naufor-pdu');assert.equal(getStatus(pdu,'2026-10-31'),'active');assert.ok(getEvents(docs,'2026-10-31').some(e=>e.doc.id===pdu.id&&e.type==='Срок исполнения'&&e.date==='2027-01-20'));});
+test('фильтры сочетаются и избранное ограничивает выдачу',()=>{const r=search('',{category:'ifrs',status:'future',topic:'Отчётность',fund:'ЗПИФ'});assert.ok(r.length);assert.ok(r.every(x=>x.doc.category==='ifrs'&&x.doc.effective>'2026-10-31'&&x.doc.topics.includes('Отчётность')));assert.deepEqual(search('',{savedOnly:true,saved:['ias32']}).map(x=>x.doc.id),['ias32']);assert.equal(search('несуществующийтермин123').length,0);});
+test('структура данных: уникальные id, ссылки HTTPS, даты и непустые пункты',()=>{assert.equal(new Set(docs.map(d=>d.id)).size,docs.length);for(const d of docs){assert.ok(d.clauses.length,d.id);for(const key of ['published','effective','deadline'])if(d[key])assert.match(d[key],/^\d{4}-\d{2}-\d{2}$/);for(const url of [d.url,...d.clauses.map(c=>c.url)])assert.equal(new URL(url).protocol,'https:');}});
+test('начало действия стандарта СЧА не подменяет его применение с 2027 года',()=>{const d=docs.find(d=>d.id==='naufor-nav-2027');assert.equal(d.effective,'2026-06-18');assert.equal(getStatus(d,'2026-10-31'),'future');assert.equal(getStatus(d,'2027-01-01'),'active');assert.ok(getEvents(docs,'2026-10-31').some(e=>e.doc.id===d.id&&e.date==='2027-01-01'&&e.type==='Начало применения'));assert.ok(search('резерв вознаграждений').some(r=>r.doc.id===d.id&&r.clauses.some(c=>c.ref==='Глава 4')));});
